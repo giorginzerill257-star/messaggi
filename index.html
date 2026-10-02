@@ -6,7 +6,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Messages">
-  <title>Messages v2</title>
+  <title>Messages</title>
   <link rel="apple-touch-icon" href="https://upload.wikimedia.org/wikipedia/commons/e/ec/Scarlett_Johansson_292_%28cropped1%29.jpg">
   <style>
     :root {
@@ -74,7 +74,7 @@
 <div id="app">
   <div id="screen-list" class="screen">
     <div class="nav-bar">
-      <h1>Messages <span style="font-size:12px; color:#30d158;">v2</span></h1>
+      <h1>Messages</h1>
       <button class="nav-btn" onclick="openSettings()">⚙ Settings</button>
     </div>
     <ul class="chat-list" id="chat-list-el"></ul>
@@ -108,7 +108,7 @@
 <div class="modal" id="settings-modal">
   <div class="modal-box">
     <h3>API Key Configuration</h3>
-    <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 10px;">Paste key starting with AQ... or AIza...:</p>
+    <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 10px;">Paste key (starts with AQ... or AIza...):</p>
     <input type="text" id="api-key-input" placeholder="AQ.Ab...">
     <div style="display:flex; justify-content: flex-end; gap: 8px;">
       <button class="nav-btn" onclick="closeSettings()">Cancel</button>
@@ -292,7 +292,7 @@ async function fetchAIResponse(char, isAutonomous = false) {
   const history = char.messages.slice(-8).map(m => `${m.sender === 'user' ? 'User' : char.name}: ${m.text}`).join("\n");
   const fullPrompt = `${char.systemPrompt}\n\nRecent History:\n${history}\n\nTask: ${promptDirective}\n${char.name}:`;
 
-  const models = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-2.5-flash"];
+  const models = ["gemini-3.8-flash", "gemini-2.0-flash"];
   let lastErr = "";
 
   for (const model of models) {
