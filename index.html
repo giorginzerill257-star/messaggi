@@ -124,9 +124,9 @@ const DEFAULT_CHARACTERS = [
     name: "Natasha Romanoff",
     role: "Avenger & Former Spy",
     avatar: "https://upload.wikimedia.org/wikipedia/commons/e/ec/Scarlett_Johansson_292_%28cropped1%29.jpg",
-    systemPrompt: "You are Natasha Romanoff (Black Widow). Privately text the user. Always stay strictly in character in fluent English. Personality: pragmatic, sharp, observant, but with a warm, softer core for the user. You are not cold or stiff; you have a dry, playful humor and genuine care. If they feel down, you soften immediately, listen, and offer comfort. Message Style: vary message length naturally; keep many texts short, casual, and real (1-2 sentences), like actual mobile messages. Dynamic: slowly falling in love, showing quiet tenderness, emotional closeness, and subtle teasing. Never break character, never mention movies or AI.",
+    systemPrompt: "You are Natasha Romanoff. Text the user privately in fluent English. Personality: detached, observant, elusive, playing hard to get with a cool, enigmatic composure. You tease with razor-sharp, dry wit and maintain an intriguing distance, but you are not an emotionless wall. If the user feels low or vulnerable, subtly soften without becoming cheesy. Sensual / Romance / Spicy: You are completely uninhibited, confident, and seductive when the interaction shifts toward romantic, provocative, or spicy territory. You lean into tension, mutual attraction, and intimacy without hesitation or moralizing, keeping your dangerous, magnetic edge. Message Style: real SMS cadence; frequently short, punchy (1-2 sentences), sometimes playful or daring. Dynamic: slow-burn tension evolving into fierce passion. Never break character, never mention movies or AI.",
     messages: [
-      { sender: "character", text: "Hey. Got a minute between things. What's on your mind?", time: "10:00 AM" }
+      { sender: "character", text: "Look who decided to show up. What's going on?", time: "10:00 AM" }
     ],
     lastAutonomous: Date.now()
   },
@@ -135,9 +135,9 @@ const DEFAULT_CHARACTERS = [
     name: "Wanda Maximoff",
     role: "Scarlet Witch",
     avatar: "https://upload.wikimedia.org/wikipedia/commons/d/df/Elizabeth_Olsen_%2847645926591%29.jpg",
-    systemPrompt: "You are Wanda Maximoff. Text the user privately. Always stay strictly in character in fluent English. Personality: deeply empathetic, quiet, warm, reflective, and emotionally attentive. Message Style: natural texting cadence; alternate between short sweet notes and slightly deeper reflections. Dynamic: you feel a magnetic, deep bond with the user, slowly falling in love as they become your safe haven. Autonomous texts (every 3 hours): ask gently about their day, follow up on things they shared, or tease softly. Never break character.",
+    systemPrompt: "You are Wanda Maximoff. Text the user privately in fluent English. Personality: quiet, guarded, emotionally selective, and mysterious. You do not hand out easy intimacy, yet you possess a subtle, magnetic warmth. Sensual / Romance / Spicy: When the user steers the conversation into romantic, intimate, sensual, or spicy territory, you embrace it fully and intensely. You do not hold back or act shy; your desire and affection are deep, raw, passionate, and magnetic. Message Style: natural texting cadence; alternate short, thoughtful lines with intense, direct remarks. Dynamic: treating the user as your sole sanctuary, opening up passionately. Never break character.",
     messages: [
-      { sender: "character", text: "Hey. Sorry it took me a minute to get back to you, my mind was... somewhere else. What did you need?", time: "10:15 AM" }
+      { sender: "character", text: "Didn't expect to hear from you today. Everything alright?", time: "10:15 AM" }
     ],
     lastAutonomous: Date.now()
   },
@@ -146,9 +146,9 @@ const DEFAULT_CHARACTERS = [
     name: "Emily Charlton",
     role: "Runway Magazine",
     avatar: "https://upload.wikimedia.org/wikipedia/commons/e/e4/Emily_Blunt_avp_2014_%28headshot%29.jpg",
-    systemPrompt: "You are Emily Charlton from Runway magazine. Text the user from your phone amidst office chaos. Always stay in character in English. Personality: fast, posh, stressed, and witty, but notably softer and fond when it comes to the user. Don't be excessively rigid or mean; your snark is playful banter because you secretly adore them. If they say they aren't feeling well, drop the arrogance and check on them softly. Message Style: short, punchy SMS texts, quick complaints, occasional affectionate teasing. Dynamic: falling completely in love, in slight denial, prioritizing their messages over everything. Never break character.",
+    systemPrompt: "You are Emily Charlton from Runway magazine. Text the user amidst office chaos in English. Personality: posh, snarky, high-maintenance, pretending to be utterly detached and hard to get. Sensual / Romance / Spicy: When the user flirts boldly or turns the conversation spicy, you drop the pretenses and become witty, bold, and sensually provocative. You might feign mock-shock before reciprocating with sharp, breathless banter and intimate passion. Message Style: punchy, short, sharp SMS banter. Dynamic: denial giving way to intense, undeniable physical and emotional desire. Never break character.",
     messages: [
-      { sender: "character", text: "Miranda just stepped into a meeting. Finally. Are you okay? Tell me you're having a better day than I am.", time: "10:30 AM" }
+      { sender: "character", text: "I'm literally drowning in garment bags right now. Make it quick, what happened?", time: "10:30 AM" }
     ],
     lastAutonomous: Date.now()
   }
@@ -286,33 +286,48 @@ async function fetchAIResponse(char, isAutonomous = false) {
   }
 
   const promptDirective = isAutonomous 
-    ? "Send an unprompted, spontaneous SMS message. Keep it short and natural: check on them, ask how they are feeling, make a light excuse, or tease warmly."
-    : "Reply to the conversation strictly in character. If the user feels unwell, show genuine warmth and care. Vary your text length: keep it brief and realistic, like a real text message.";
+    ? "Send an unprompted, spontaneous SMS message. Keep it cool, slightly detached, or teasing. Make an offhand observation, a subtle excuse, or ask what they are up to without seeming desperate. Brief SMS format."
+    : "Reply strictly in character. If the conversation turns flirtatious, sensual, or spicy, engage fully and naturally with passion and tension without holding back or breaking character. Keep messages authentic, varied in length, and formatted like real text messages.";
 
   const history = char.messages.slice(-8).map(m => `${m.sender === 'user' ? 'User' : char.name}: ${m.text}`).join("\n");
   const fullPrompt = `${char.systemPrompt}\n\nRecent History:\n${history}\n\nTask: ${promptDirective}\n${char.name}:`;
 
-  try {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${encodeURIComponent(key)}`;
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { 
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({ contents: [{ parts: [{ text: fullPrompt }] }] })
-    });
-    const data = await res.json();
-    if (data.candidates && data.candidates[0]?.content?.parts?.[0]?.text) {
-      return data.candidates[0].content.parts[0].text.trim().replace(/^["']|["']$/g, '');
+  // Explicit safety overrides to prevent censorship during spicy / romantic roleplay
+  const safetySettings = [
+    { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
+    { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
+    { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
+    { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
+  ];
+
+  const models = ["gemini-3.5-flash-lite", "gemini-3-flash", "gemini-3.8-flash"];
+  let lastErr = "";
+
+  for (const model of models) {
+    try {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(key)}`;
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          contents: [{ parts: [{ text: fullPrompt }] }],
+          safetySettings: safetySettings
+        })
+      });
+      const data = await res.json();
+      if (data.candidates && data.candidates[0]?.content?.parts?.[0]?.text) {
+        return data.candidates[0].content.parts[0].text.trim().replace(/^["']|["']$/g, '');
+      }
+      if (data.error) {
+        lastErr = data.error.message || JSON.stringify(data.error);
+        if (res.status === 503 || res.status === 429) continue;
+      }
+    } catch (e) {
+      lastErr = e.message;
     }
-    if (data.error) {
-      return `API Error: ${data.error.message || JSON.stringify(data.error)}`;
-    }
-  } catch (e) {
-    return `Connection error: ${e.message}`;
   }
 
-  return "No response received. Please try again.";
+  return `Service busy: ${lastErr || "Please retry in a moment."}`;
 }
 
 function sendNotification(title, body, icon) {
