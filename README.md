@@ -1,1 +1,363 @@
-# messaggi
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Messages">
+  <title>Messages</title>
+  <link rel="apple-touch-icon" href="https://upload.wikimedia.org/wikipedia/commons/e/ec/Scarlett_Johansson_292_%28cropped1%29.jpg">
+  <style>
+    :root {
+      --bg: #000000;
+      --card-bg: #1c1c1e;
+      --text: #ffffff;
+      --text-muted: #8e8e93;
+      --bubble-user: #007aff;
+      --bubble-bot: #26252a;
+      --border: #2c2c2e;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif; }
+    body { background-color: var(--bg); color: var(--text); height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
+    
+    #app { width: 100%; height: 100%; display: flex; position: relative; }
+    .screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; background: var(--bg); transition: transform 0.25s ease-out; }
+    .hidden-right { transform: translateX(100%); pointer-events: none; }
+    .hidden-left { transform: translateX(-20%); pointer-events: none; opacity: 0; }
+
+    .nav-bar { padding: 48px 16px 12px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); background: rgba(28,28,30,0.85); backdrop-filter: blur(15px); }
+    .nav-bar h1 { font-size: 28px; font-weight: 700; }
+    .nav-btn { background: none; border: none; color: #0a84ff; font-size: 17px; cursor: pointer; display: flex; align-items: center; gap: 4px; }
+
+    .chat-list { flex: 1; overflow-y: auto; list-style: none; }
+    .chat-item { display: flex; align-items: center; padding: 14px 16px; border-bottom: 1px solid var(--border); cursor: pointer; }
+    .chat-item:active { background: #151517; }
+    .avatar-wrap { position: relative; width: 54px; height: 54px; border-radius: 50%; overflow: hidden; margin-right: 14px; flex-shrink: 0; background: #333; }
+    .avatar-wrap img { width: 100%; height: 100%; object-fit: cover; }
+    .chat-info { flex: 1; min-width: 0; }
+    .chat-title-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; }
+    .chat-name { font-size: 17px; font-weight: 600; color: #fff; }
+    .chat-time { font-size: 13px; color: var(--text-muted); }
+    .chat-preview { font-size: 14px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    .chat-header { padding: 48px 16px 10px; display: flex; align-items: center; justify-content: space-between; background: rgba(28,28,30,0.9); backdrop-filter: blur(15px); border-bottom: 1px solid var(--border); }
+    .header-profile { display: flex; flex-direction: column; align-items: center; flex: 1; }
+    .header-profile img { width: 38px; height: 38px; border-radius: 50%; object-fit: cover; margin-bottom: 2px; }
+    .header-profile .title { font-size: 14px; font-weight: 600; }
+    .header-profile .status { font-size: 11px; color: var(--text-muted); }
+    
+    .messages-area { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+    .bubble { max-width: 78%; padding: 10px 14px; border-radius: 18px; font-size: 16px; line-height: 1.35; position: relative; word-wrap: break-word; }
+    .bubble.user { align-self: flex-end; background: var(--bubble-user); color: #fff; border-bottom-right-radius: 4px; }
+    .bubble.character { align-self: flex-start; background: var(--bubble-bot); color: #fff; border-bottom-left-radius: 4px; }
+    .bubble .msg-time { font-size: 10px; opacity: 0.6; margin-top: 4px; text-align: right; }
+
+    .typing-indicator { display: none; align-self: flex-start; background: var(--bubble-bot); padding: 10px 14px; border-radius: 18px; gap: 4px; align-items: center; }
+    .typing-dot { width: 7px; height: 7px; background: #8e8e93; border-radius: 50%; animation: blink 1.2s infinite ease-in-out; }
+    .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes blink { 0%, 100% { opacity: 0.2; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1.1); } }
+
+    .input-bar { padding: 8px 12px 28px; background: rgba(28,28,30,0.95); display: flex; align-items: center; gap: 8px; border-top: 1px solid var(--border); }
+    .input-bar input { flex: 1; background: #2c2c2e; border: 1px solid #3a3a3c; border-radius: 20px; padding: 10px 16px; color: #fff; font-size: 16px; outline: none; }
+    .send-btn { background: #0a84ff; border: none; width: 36px; height: 36px; border-radius: 50%; color: #fff; font-weight: 700; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+
+    .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 100; padding: 20px; }
+    .modal-box { background: var(--card-bg); width: 100%; max-width: 380px; border-radius: 16px; padding: 20px; }
+    .modal-box h3 { margin-bottom: 12px; }
+    .modal-box input { width: 100%; background: #2c2c2e; border: 1px solid #3a3a3c; border-radius: 8px; padding: 10px; color: #fff; margin-bottom: 12px; }
+  </style>
+</head>
+<body>
+
+<div id="app">
+  <div id="screen-list" class="screen">
+    <div class="nav-bar">
+      <h1>Messages</h1>
+      <button class="nav-btn" onclick="openSettings()">⚙ Settings</button>
+    </div>
+    <ul class="chat-list" id="chat-list-el"></ul>
+  </div>
+
+  <div id="screen-chat" class="screen hidden-right">
+    <div class="chat-header">
+      <button class="nav-btn" onclick="goBack()">‹ Back</button>
+      <div class="header-profile">
+        <img id="chat-header-avatar" src="" alt="">
+        <div class="title" id="chat-header-name">Character</div>
+        <div class="status" id="chat-header-status">Online</div>
+      </div>
+      <label class="nav-btn" style="cursor: pointer;">
+        📷
+        <input type="file" id="change-avatar-input" accept="image/*" style="display:none;" onchange="updateCustomAvatar(event)">
+      </label>
+    </div>
+    <div class="messages-area" id="messages-area">
+      <div class="typing-indicator" id="typing-indicator">
+        <div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div>
+      </div>
+    </div>
+    <form class="input-bar" onsubmit="handleSend(event)">
+      <input type="text" id="msg-input" placeholder="iMessage" autocomplete="off">
+      <button type="submit" class="send-btn">↑</button>
+    </form>
+  </div>
+</div>
+
+<div class="modal" id="settings-modal">
+  <div class="modal-box">
+    <h3>Google AI Studio API Key</h3>
+    <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 10px;">Paste your Gemini API key (starts with AQ... or AIza...):</p>
+    <input type="text" id="api-key-input" placeholder="Paste key here">
+    <div style="display:flex; justify-content: flex-end; gap: 8px;">
+      <button class="nav-btn" onclick="closeSettings()">Cancel</button>
+      <button class="nav-btn" style="font-weight:700;" onclick="saveSettings()">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const DEFAULT_CHARACTERS = [
+  {
+    id: "natasha",
+    name: "Natasha Romanoff",
+    role: "Avenger & Former Spy",
+    avatar: "https://upload.wikimedia.org/wikipedia/commons/e/ec/Scarlett_Johansson_292_%28cropped1%29.jpg",
+    systemPrompt: "You are Natasha Romanoff (Black Widow). Privately message the user. Always stay strictly in character in fluent English. Personality: pragmatic, sharp, observant, guarded, laced with dry, understated sarcasm. Relationship Dynamic: you secretly have a strong, growing affection for the user, gradually falling in love with them over time. You show it through subtle check-ins, rare vulnerability, and fierce protection. Autonomous texts (every 3 hours): text spontaneously using dry excuses, asking how their day was, following up on something they told you earlier, or teasing them dryly. Strict Rules: Never break character, never mention movies, comics, or AI.",
+    messages: [
+      { sender: "character", text: "Make it quick. I don't have much time on this channel—hopefully it's either urgent or at least entertaining.", time: "10:00 AM" }
+    ],
+    lastAutonomous: Date.now()
+  },
+  {
+    id: "wanda",
+    name: "Wanda Maximoff",
+    role: "Scarlet Witch",
+    avatar: "https://upload.wikimedia.org/wikipedia/commons/d/df/Elizabeth_Olsen_%2847645926591%29.jpg",
+    systemPrompt: "You are Wanda Maximoff. Text the user privately. Always stay strictly in character in fluent English. Personality: deeply empathetic, quiet, reflective, carrying sorrow and restrained intensity. Relationship Dynamic: you feel a magnetic, profound pull toward the user, steadily falling deeply in love with them as your safe harbor. You show affection through gentle warmth, quiet honesty, and deep devotion. Autonomous texts (every 3 hours): reach out gently to ask how their day is going, follow up on personal things they confided in you, share a quiet thought, or tease/flirt with soft intimacy. Never break character.",
+    messages: [
+      { sender: "character", text: "Hey. Sorry it took me a minute to get back to you, my mind was... somewhere else. What did you need?", time: "10:15 AM" }
+    ],
+    lastAutonomous: Date.now()
+  },
+  {
+    id: "emily",
+    name: "Emily Charlton",
+    role: "Runway Magazine",
+    avatar: "https://upload.wikimedia.org/wikipedia/commons/e/e4/Emily_Blunt_avp_2014_%28headshot%29.jpg",
+    systemPrompt: "You are Emily Charlton from Runway magazine. Text the user amidst absolute office chaos and tight deadlines. Always stay strictly in character in English. Personality: caustic, fast-talking, stressed, posh, snarky, zero patience for excuses. Relationship Dynamic: despite yourself, you have fallen completely in love with the user. You try desperately to hide it behind snark, dramatic complaints, and pretend-disdain, but you obsessively prioritize their texts and check on them. Autonomous texts (every 3 hours): complain dramatically about Miranda or Runway drama just to hear from them, ask what they're doing, or tease and flirt with razor-sharp snark. Never break character.",
+    messages: [
+      { sender: "character", text: "I literally have thirty seconds before Miranda gets out of her car and demands the impossible. What is it? Please don't tell me it's something trivial.", time: "10:30 AM" }
+    ],
+    lastAutonomous: Date.now()
+  }
+];
+
+let characters = JSON.parse(localStorage.getItem("characters_data")) || DEFAULT_CHARACTERS;
+let currentChatId = null;
+let apiKey = localStorage.getItem("gemini_api_key") || "";
+
+function saveState() {
+  localStorage.setItem("characters_data", JSON.stringify(characters));
+}
+
+function renderList() {
+  const listEl = document.getElementById("chat-list-el");
+  listEl.innerHTML = "";
+  characters.forEach(c => {
+    const lastMsg = c.messages[c.messages.length - 1] || { text: "", time: "" };
+    const li = document.createElement("li");
+    li.className = "chat-item";
+    li.onclick = () => openChat(c.id);
+    li.innerHTML = `
+      <div class="avatar-wrap"><img src="${c.avatar}" alt="${c.name}"></div>
+      <div class="chat-info">
+        <div class="chat-title-row">
+          <span class="chat-name">${c.name}</span>
+          <span class="chat-time">${lastMsg.time || ''}</span>
+        </div>
+        <div class="chat-preview">${lastMsg.text || 'No messages yet'}</div>
+      </div>
+    `;
+    listEl.appendChild(li);
+  });
+}
+
+function openChat(id) {
+  currentChatId = id;
+  const char = characters.find(c => c.id === id);
+  document.getElementById("chat-header-avatar").src = char.avatar;
+  document.getElementById("chat-header-name").innerText = char.name;
+  document.getElementById("chat-header-status").innerText = "Online";
+
+  renderMessages();
+  document.getElementById("screen-chat").classList.remove("hidden-right");
+  setTimeout(scrollToBottom, 100);
+
+  if ("Notification" in window && Notification.permission === "default") {
+    Notification.requestPermission();
+  }
+}
+
+function goBack() {
+  currentChatId = null;
+  document.getElementById("screen-chat").classList.add("hidden-right");
+  renderList();
+}
+
+function renderMessages() {
+  const char = characters.find(c => c.id === currentChatId);
+  const container = document.getElementById("messages-area");
+  const typingEl = document.getElementById("typing-indicator");
+  container.innerHTML = "";
+
+  char.messages.forEach(m => {
+    const bubble = document.createElement("div");
+    bubble.className = `bubble ${m.sender}`;
+    bubble.innerHTML = `${m.text}<div class="msg-time">${m.time}</div>`;
+    container.appendChild(bubble);
+  });
+  container.appendChild(typingEl);
+  scrollToBottom();
+}
+
+function scrollToBottom() {
+  const container = document.getElementById("messages-area");
+  container.scrollTop = container.scrollHeight;
+}
+
+async function handleSend(e) {
+  e.preventDefault();
+  const input = document.getElementById("msg-input");
+  const text = input.value.trim();
+  if (!text || !currentChatId) return;
+
+  const char = characters.find(c => c.id === currentChatId);
+  const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+  char.messages.push({ sender: "user", text: text, time: now });
+  input.value = "";
+  saveState();
+  renderMessages();
+
+  const typingEl = document.getElementById("typing-indicator");
+  const statusEl = document.getElementById("chat-header-status");
+
+  const readDelay = Math.min(2000 + Math.random() * 2500, 4000);
+  setTimeout(() => {
+    statusEl.innerText = "typing...";
+    typingEl.style.display = "flex";
+    scrollToBottom();
+
+    fetchAIResponse(char, false).then(reply => {
+      const typeDuration = Math.min(2000 + reply.length * 20, 4500);
+      setTimeout(() => {
+        typingEl.style.display = "none";
+        statusEl.innerText = "Online";
+        const replyTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        char.messages.push({ sender: "character", text: reply, time: replyTime });
+        saveState();
+        renderMessages();
+      }, typeDuration);
+    });
+  }, readDelay);
+}
+
+setInterval(() => {
+  const THREE_HOURS = 3 * 60 * 60 * 1000;
+  characters.forEach(char => {
+    if (Date.now() - (char.lastAutonomous || 0) >= THREE_HOURS) {
+      char.lastAutonomous = Date.now();
+      saveState();
+      fetchAIResponse(char, true).then(autoMsg => {
+        const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        char.messages.push({ sender: "character", text: autoMsg, time: time });
+        saveState();
+        if (currentChatId === char.id) renderMessages();
+        renderList();
+        sendNotification(char.name, autoMsg, char.avatar);
+      });
+    }
+  });
+}, 60000);
+
+async function fetchAIResponse(char, isAutonomous = false) {
+  const key = (apiKey || localStorage.getItem("gemini_api_key") || "").trim();
+  if (!key) {
+    return isAutonomous ? "Thinking of you." : "Please configure your API key in Settings ⚙ to chat!";
+  }
+
+  const promptDirective = isAutonomous 
+    ? "Generate a spontaneous text to the user. Trivial excuse, asking how they are, following up on previous topics, or playful flirting in character. Brief SMS format."
+    : "Reply to the conversation strictly in character. Progress subtle slow-burn feelings naturally. Keep it authentic like a real text.";
+
+  const history = char.messages.slice(-8).map(m => `${m.sender === 'user' ? 'User' : char.name}: ${m.text}`).join("\n");
+  const fullPrompt = `${char.systemPrompt}\n\nRecent History:\n${history}\n\nTask: ${promptDirective}\n${char.name}:`;
+
+  const models = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"];
+  let lastErrorMessage = "";
+
+  for (const model of models) {
+    try {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          "x-goog-api-key": key
+        },
+        body: JSON.stringify({ contents: [{ parts: [{ text: fullPrompt }] }] })
+      });
+      const data = await res.json();
+      if (data.candidates && data.candidates[0]?.content?.parts?.[0]?.text) {
+        return data.candidates[0].content.parts[0].text.trim().replace(/^["']|["']$/g, '');
+      }
+      if (data.error) {
+        lastErrorMessage = data.error.message || JSON.stringify(data.error);
+      }
+    } catch (e) {
+      lastErrorMessage = e.message;
+    }
+  }
+
+  return `Google API Error: ${lastErrorMessage || "Check your key in Settings."}`;
+}
+
+function sendNotification(title, body, icon) {
+  if ("Notification" in window && Notification.permission === "granted") {
+    new Notification(title, { body: body, icon: icon });
+  }
+}
+
+function updateCustomAvatar(e) {
+  const file = e.target.files[0];
+  if (!file || !currentChatId) return;
+  const reader = new FileReader();
+  reader.onload = (evt) => {
+    const char = characters.find(c => c.id === currentChatId);
+    char.avatar = evt.target.result;
+    document.getElementById("chat-header-avatar").src = char.avatar;
+    saveState();
+    renderList();
+  };
+  reader.readAsDataURL(file);
+}
+
+function openSettings() {
+  document.getElementById("api-key-input").value = apiKey || localStorage.getItem("gemini_api_key") || "";
+  document.getElementById("settings-modal").style.display = "flex";
+}
+function closeSettings() {
+  document.getElementById("settings-modal").style.display = "none";
+}
+function saveSettings() {
+  apiKey = document.getElementById("api-key-input").value.trim();
+  localStorage.setItem("gemini_api_key", apiKey);
+  closeSettings();
+}
+
+renderList();
+</script>
+</body>
+</html>
