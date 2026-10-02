@@ -6,7 +6,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Messages">
-  <title>Messages</title>
+  <title>Messages v2</title>
   <link rel="apple-touch-icon" href="https://upload.wikimedia.org/wikipedia/commons/e/ec/Scarlett_Johansson_292_%28cropped1%29.jpg">
   <style>
     :root {
@@ -74,7 +74,7 @@
 <div id="app">
   <div id="screen-list" class="screen">
     <div class="nav-bar">
-      <h1>Messages</h1>
+      <h1>Messages <span style="font-size:12px; color:#30d158;">v2</span></h1>
       <button class="nav-btn" onclick="openSettings()">⚙ Settings</button>
     </div>
     <ul class="chat-list" id="chat-list-el"></ul>
@@ -107,9 +107,9 @@
 
 <div class="modal" id="settings-modal">
   <div class="modal-box">
-    <h3>Google AI Studio API Key</h3>
-    <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 10px;">Paste your Gemini API key (starts with AQ... or AIza...):</p>
-    <input type="text" id="api-key-input" placeholder="Paste key here">
+    <h3>API Key Configuration</h3>
+    <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 10px;">Paste key starting with AQ... or AIza...:</p>
+    <input type="text" id="api-key-input" placeholder="AQ.Ab...">
     <div style="display:flex; justify-content: flex-end; gap: 8px;">
       <button class="nav-btn" onclick="closeSettings()">Cancel</button>
       <button class="nav-btn" style="font-weight:700;" onclick="saveSettings()">Save</button>
@@ -244,22 +244,19 @@ async function handleSend(e) {
   const typingEl = document.getElementById("typing-indicator");
   const statusEl = document.getElementById("chat-header-status");
 
-  const readDelay = Math.min(2000 + Math.random() * 2500, 4000);
+  const readDelay = 1500 + Math.random() * 2000;
   setTimeout(() => {
     statusEl.innerText = "typing...";
     typingEl.style.display = "flex";
     scrollToBottom();
 
     fetchAIResponse(char, false).then(reply => {
-      const typeDuration = Math.min(2000 + reply.length * 20, 4500);
-      setTimeout(() => {
-        typingEl.style.display = "none";
-        statusEl.innerText = "Online";
-        const replyTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        char.messages.push({ sender: "character", text: reply, time: replyTime });
-        saveState();
-        renderMessages();
-      }, typeDuration);
+      typingEl.style.display = "none";
+      statusEl.innerText = "Online";
+      const replyTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      char.messages.push({ sender: "character", text: reply, time: replyTime });
+      saveState();
+      renderMessages();
     });
   }, readDelay);
 }
@@ -285,7 +282,7 @@ setInterval(() => {
 async function fetchAIResponse(char, isAutonomous = false) {
   const key = (apiKey || localStorage.getItem("gemini_api_key") || "").trim();
   if (!key) {
-    return isAutonomous ? "Thinking of you." : "Please configure your API key in Settings ⚙ to chat!";
+    return "Please configure your API key in Settings ⚙ to chat!";
   }
 
   const promptDirective = isAutonomous 
@@ -295,17 +292,16 @@ async function fetchAIResponse(char, isAutonomous = false) {
   const history = char.messages.slice(-8).map(m => `${m.sender === 'user' ? 'User' : char.name}: ${m.text}`).join("\n");
   const fullPrompt = `${char.systemPrompt}\n\nRecent History:\n${history}\n\nTask: ${promptDirective}\n${char.name}:`;
 
-  const models = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"];
-  let lastErrorMessage = "";
+  const models = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-2.5-flash"];
+  let lastErr = "";
 
   for (const model of models) {
     try {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(key)}`;
       const res = await fetch(url, {
         method: "POST",
         headers: { 
-          "Content-Type": "application/json",
-          "x-goog-api-key": key
+          "Content-Type": "application/json"
         },
         body: JSON.stringify({ contents: [{ parts: [{ text: fullPrompt }] }] })
       });
@@ -314,14 +310,14 @@ async function fetchAIResponse(char, isAutonomous = false) {
         return data.candidates[0].content.parts[0].text.trim().replace(/^["']|["']$/g, '');
       }
       if (data.error) {
-        lastErrorMessage = data.error.message || JSON.stringify(data.error);
+        lastErr = data.error.message || JSON.stringify(data.error);
       }
     } catch (e) {
-      lastErrorMessage = e.message;
+      lastErr = e.message;
     }
   }
 
-  return `Google API Error: ${lastErrorMessage || "Check your key in Settings."}`;
+  return `Connection error: ${lastErr || "Check key"}`;
 }
 
 function sendNotification(title, body, icon) {
